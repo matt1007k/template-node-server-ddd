@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+}
+
+enum StatusUser {
+  ACTIVE
+  INACTIVE
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum AttachmentType {
+  USER
+}
+
+model User {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String         @unique
+  username        String         @unique
+  firstName       String
+  first_lastName  String
+  second_lastName String
+  password        String
+  status          StatusUser @default(ACTIVE)
+  avatarUrl       String
+
+  groups GroupPermission[] @relation("UserGroupPermission")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("users")
+}
+
+model AttachmentFile {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  fileUrl String?
+
+  entityId   String?         @db.Uuid
+  entityType AttachmentType? @default(USER)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("attachment_files")
+}
+
+model Notification {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  UserId String  @db.Uuid
+  officeId   String? @db.Uuid
+  data       Json
+
+  readAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("notifications")
+}
+
+model Group {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  description String @unique
+
+  permissions GroupPermission[]  @relation("GroupPermission")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("groups")
+}
+
+model Permission {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  value       String @unique
+  description String
+
+  groups GroupPermission[] @relation("PermissionGroup")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("permissions")
+}
+
+model GroupPermission {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group        Group      @relation("GroupPermission", fields: [groupId], references: [id], onDelete: Cascade)
+  groupId      String     @db.Uuid
+  permission   Permission @relation("PermissionGroup", fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId String     @db.Uuid
+  user   User? @relation("UserGroupPermission", fields: [userId], references: [id], onDelete: Cascade)
+  userId String?     @db.Uuid
+
+  @@map("group_permissions")
+}
